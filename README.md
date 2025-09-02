@@ -1,61 +1,193 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Tickets Dashboard Octane
+
+Dashboard de **tickets** com **Laravel 12 + Octane (Swoole)** e **Sail (Docker)**.  
+KPIs calculados em **concorrência** (`Octane::concurrently`), **cache em memória** via **Swoole Table** e **aquecimento periódico**.  
+Front-end (Blade + **Tailwind via CDN** + **Chart.js**), com **Server-Timing** para inspecionar tempos no DevTools.
+
+> **Stack**: PHP 8.4 • Laravel 12 • Octane (Swoole) • Sail (Docker) • MySQL 8 • Redis • Blade • Tailwind (CDN) • Chart.js
+
+---
+
+## Preview
 
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  <img src="docs/images/dashboard.png"
+       alt="Dashboard (Octane) — KPIs, gráficos e últimos tickets"
+       width="1000">
 </p>
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🔗 Endpoints
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- **Front**: `GET /` (e `/dashboard`)  
+- **API (JSON)**: `GET /dashboard-pro`  
+  Retorna: `counts`, `counts_by_status`, `sla` (7d/30d), `last10`, `usd_brl`, `generated_at`  
+  Headers: `Server-Timing`, `X-Request-Id`
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## 🚀 Rodando o projeto (passo a passo)
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+> Requisitos: **Docker** + **Docker Compose**
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+1) **Clonar & entrar**
+```bash
+git clone https://github.com/jeancarloscharao/tickets-dashboard-octane.git
+cd tickets-dashboard-octane
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+2) **Ambiente**
+```bash
+cp .env.example .env
+# verifique .env:
+# APP_URL=http://localhost:8085
+# DB_HOST=mysql
+# DB_PORT=3306
+# DB_DATABASE=sail
+# DB_USERNAME=sail
+# DB_PASSWORD=password
+# MYSQL_EXTRA_OPTIONS=
+# OCTANE_SERVER=swoole
+```
 
-## Laravel Sponsors
+3) **Subir MySQL e Redis**
+```bash
+./vendor/bin/sail up -d mysql redis
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+4) **Dependências & chave**
+```bash
+./vendor/bin/sail composer install
+./vendor/bin/sail artisan key:generate
+```
 
-### Premium Partners
+5) **Migrar banco**
+```bash
+./vendor/bin/sail artisan migrate
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+6) **(Opcional) Dados demo (100.000 tickets)**
+```bash
+./vendor/bin/sail artisan db:seed --class=DemoTicketsBigSeeder
+```
 
-## Contributing
+7) **Subir o Octane**
+```bash
+# mapeado no docker-compose (ex.: 8085:8000)
+./vendor/bin/sail up -d octane
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+8) **Acessar**
+- Front: http://localhost:8085/  
+- API:   http://localhost:8085/dashboard-pro
 
-## Code of Conduct
+> Alterou código/rotas?  
+```bash
+./vendor/bin/sail exec octane php artisan octane:reload
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+---
 
-## Security Vulnerabilities
+## 🖥️ Front-end (Tailwind CDN + Chart.js)
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- View principal: `resources/views/dashboard.blade.php`
+- CSS via **Tailwind CDN**:
+  ```html
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  ```
+- Gráficos: **Chart.js** via CDN.  
+- Não é necessário build de CSS/JS para desenvolvimento.  
+  > Em produção, o CDN do Tailwind mostra um aviso no console — é esperado.
 
-## License
+---
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## ⚙️ Detalhes técnicos
+
+### Swoole Table (cache em memória)
+Em `config/octane.php`, garanta **uma única** seção `tables` contendo:
+```php
+'tables' => [
+  'kpis:256' => [
+    'json' => 'string:8192',
+    'ts'   => 'int',
+  ],
+],
+```
+As tables são alocadas **no start** do servidor:
+```bash
+./vendor/bin/sail up -d --force-recreate octane
+```
+
+### Concorrência segura
+- **Na requisição**: `Octane::concurrently()` para consultas/HTTP em paralelo.  
+- **No boot / tick**: cálculo **sequencial** e gravação no cache (Swoole Table) para manter “quente”.
+
+### Observabilidade
+- DevTools → Network → Headers: `Server-Timing`
+  - `compute;dur=…` (recalculou)
+  - `hit;dur=…` (veio do cache)
+- Logs:
+```bash
+./vendor/bin/sail logs -f octane
+```
+
+---
+
+## 📁 Estrutura (resumo)
+
+```
+app/
+  Http/Controllers/DashboardProController.php
+  Services/KpiService.php
+config/octane.php
+resources/views/dashboard.blade.php
+routes/web.php            # '/', '/dashboard', '/dashboard-pro'
+routes/octane.php         # tick para aquecer KPIs (opcional)
+database/seeders/DemoTicketsBigSeeder.php
+docker-compose.yml
+```
+
+---
+
+## 🧪 Testes rápidos
+
+```bash
+curl -s http://localhost:8085/dashboard-pro | python3 -m json.tool
+sudo apt install -y apache2-utils
+ab -n 50 -c 10 http://localhost:8085/dashboard-pro/
+```
+
+---
+
+## 🔧 Troubleshooting
+
+**404 em `/` ou `/dashboard`**  
+→ Ver rotas em `routes/web.php`:
+```php
+Route::view('/', 'dashboard');
+Route::view('/dashboard', 'dashboard');
+Route::get('/dashboard-pro', \App\Http\Controllers\DashboardProController::class);
+```
+→ Limpar caches + reload:
+```bash
+./vendor/bin/sail exec octane php artisan optimize:clear
+./vendor/bin/sail exec octane php artisan octane:reload
+```
+
+**“Swoole table [kpis] has not been configured.”**  
+→ Ajuste `config/octane.php` e reinicie o serviço:
+```bash
+./vendor/bin/sail up -d --force-recreate octane
+```
+
+**“You’re speaking plain HTTP to an SSL-enabled server port.”**  
+→ Conflito de porta do host: confirme no `docker-compose.yml` (ex.: `8085:8000`) e acesse por ela.
+
+**Watcher (`--watch`) reclamando `chokidar`**  
+→ Instale: `npm i -D chokidar` **ou** rode sem `--watch` e use `octane:reload`.
+
+---
+
+## 📜 Licença
+MIT.
